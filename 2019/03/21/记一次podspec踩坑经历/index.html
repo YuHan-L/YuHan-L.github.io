@@ -102,7 +102,7 @@
 <meta property="og:image" content="https://ws3.sinaimg.cn/large/006tKfTcgy1g1apeedur2j327i0kkgur.jpg">
 <meta property="og:image" content="https://ws4.sinaimg.cn/large/006tKfTcgy1g1bdxad5kgj32x60modng.jpg">
 <meta property="og:image" content="https://ws2.sinaimg.cn/large/006tKfTcgy1g1be3roorqj31080h8dhw.jpg">
-<meta property="og:updated_time" content="2019-03-23T06:28:34.110Z">
+<meta property="og:updated_time" content="2019-03-23T06:32:04.919Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="记一次podspec踩坑经历">
 <meta name="twitter:description" content="背景：目前所在的项目组是多媒体开发组，项目开发的场景包括了播放器，特效，视频编辑，视频模板，代码规范工具等多个场景，随着开发迭代，项目已经变得越来越庞大，所有代码放在一个工程中不利于团队开发和维护，于是决定将项目根据功能拆分成不同的库(模块化)，各自维护。 iOS平台中使用了cocoapods这个管理工具方便进行库的管理，使用它自制私有库的关键需要自己编写podspec文件(描述库的特定版本信息的">
@@ -365,7 +365,7 @@
 <p>如果所示，我们的引用方式用的是&lt;GDMMCore/GDTimelineInfo.h&gt;的方式找到GDTimelineInfo.h，而GDTimelineInfo.h中间接的引用到了GDCoreGraphics.h这个头文件，这里有一个坑就是用这种方式引用的话，编译器会认为这里间接引用到的GDCoreGraphics.h这个文件是属于GDMMCore中的文件，所以这样就造成了编译器认为在GDMMCore和ilusion两个库中都存在这个GDCoreGraphics.h头文件，以及头文件中的函数，也就造成了图中所示的错误。</p>
 <p>这个问题的解决方式比较简单，我们只需要更改引用文件的方式，不使用&lt;模块/文件&gt;的方式引用，而是直接使用”文件”的方式，这样就解决了这个问题。</p>
 <p><img src="https://ws2.sinaimg.cn/large/006tKfTcgy1g1be3roorqj31080h8dhw.jpg" alt></p>
-<p>以上就是我这次的podspec踩坑经历，如果有遇到类似问题的同学可以参考一下，也可以和我交流哈~</p>
+<p>以上就是我这次的podspec踩坑经历，如果有遇到类似问题的同学可以参考一下哈~</p>
 <p>参考链接:</p>
 <p><a href="https://guides.cocoapods.org/syntax/podspec.html#pod_target_xcconfig" target="_blank" rel="noopener">cocoapods</a></p>
 <p><a href="https://pewpewthespells.com/blog/buildsettings.html" target="_blank" rel="noopener">Xcode Build Settings</a></p>
@@ -389,22 +389,6 @@
       
       
 
-      
-        <div class="post-nav">
-          <div class="post-nav-next post-nav-item">
-            
-              <a href="/2019/03/11/hello-world/" rel="next" title="Hello World">
-                <i class="fa fa-chevron-left"></i> Hello World
-              </a>
-            
-          </div>
-
-          <span class="post-nav-divider"></span>
-
-          <div class="post-nav-prev post-nav-item">
-            
-          </div>
-        </div>
       
 
       
@@ -478,7 +462,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">2</span>
+                  <span class="site-state-item-count">1</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
