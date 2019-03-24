@@ -229,6 +229,153 @@
   
   
   <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/23/Xcode的Compress PNG Files作用分析/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="时雨">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="时雨のCODE_POOL">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                <a class="post-title-link" href="/2019/03/23/Xcode的Compress PNG Files作用分析/" itemprop="url">Xcode的Compress PNG Files作用分析</a></h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2019-03-23T22:55:19+08:00">
+                2019-03-23
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+            <p>最近在工作中遇到一个PNG图片最终渲染出来丢失了Alpha(透明度)的问题，在经过不断地查阅资料和思考后终于解决了这个问题，在这里想和大家分享一下过程中学习到的一些知识点。</p>
+<h4 id="问题背景"><a href="#问题背景" class="headerlink" title="问题背景"></a>问题背景</h4><p>目前所做的项目是一个跨平台渲染引擎，使用的是stb_image库读取图片像素数据（以RGBA排列），之后通过OpenGL的glTexImage2D生成纹理并渲染，iOS平台使用EAGLLayer来显示最后的渲染结果。</p>
+<p>然而发现了放在Xcode工程下面的PNG图片能够正常的显示，而通过下载的PNG图片却出现了Alpha信息丢失的情况。</p>
+<p>那么为什么会从工程中读取的PNG像素数据能正常显示，而下载的PNG图片却丢失了Alpha信息呢？我们发现在Xcode的Build Settings中有个和PNG相关的选项叫做Compress PNG Files，默认是开启的，我们尝试着关闭这个选项，发现再加载工程的PNG图片也出现了Alpha信息丢失的情况了。那么问题就定位到了这个Compress PNG Files了，到底这个Compress PNG Files到底做了什么事情呢？</p>
+<h3 id="关于PNG"><a href="#关于PNG" class="headerlink" title="关于PNG"></a>关于PNG</h3><p>首先我们来简单看下PNG是啥，维基百科上面的定义是便<strong>携式网络图形</strong>（英语：Portable Network Graphics，缩写：<strong>PNG</strong>）是一种无损压缩的位图图形格式，支持索引、灰度、RGB三种颜色方案以及Alpha通道等特性。</p>
+<p>如果想更具体的了解PNG，可以看一下<a href="https://www.cnblogs.com/lidabo/p/3701197.html" target="_blank" rel="noopener">PNG文件结构</a>。</p>
+<h3 id="关于Xcode-中的Compress-PNG-Files"><a href="#关于Xcode-中的Compress-PNG-Files" class="headerlink" title="关于Xcode 中的Compress PNG Files"></a>关于Xcode 中的Compress PNG Files</h3><p>Compress PNG Files从字面上简单翻译一下就是”压缩PNG文件”的意思，但是当你把这个选项开启之后会发现编译之后的ipa包不但没有减小，反而增大了，这是怎么回事呢？说好的压缩呢？这个Compress PNG Files到底做了啥事呢？</p>
+<p>当 Xcode 优化一个 PNG 文件的时候，它将 PNG 文件变成一个从技术上讲不再是有效的PNG文件。但是 iOS 可以读取这种文件，并且这比解压缩正常的 PNG 文件更快。</p>
+<p>它做了以下几件事情：</p>
+<ul>
+<li>额外关键块（CgBI）</li>
+<li>byteswapped（RGBA - &gt; BGRA）像素数据，大概是用于帧缓冲的高速直接blitting</li>
+<li>从IDAT块中删除了zlib页眉，页脚和CRC</li>
+<li>预乘alpha（<code>颜色&#39;=颜色* alpha / 255</code>）</li>
+</ul>
+<p>明显的改动就是在IHDR块之前插入了CgBI块来表示这种格式，CgBI文件格式因其额外标题而得名，是Apple对PNG图像格式的专有扩展，同时修改了IDAT块中的数据，原因就是在iPhone中，图像是以BGRA格式在内存中处理的，到这里就可以发现，其实这个所谓的Compress PNG Files，最主要的目的并不是压缩图片的大小，而是将图片转换成iPhone能更方便处理的格式，加快处理速度。</p>
+<p>这里我们重点看下有一个和Alpha相关的操作<strong>预乘Alpha</strong>，那么什么是预乘Alpha呢，这个操作的作用是什么呢？</p>
+<h3 id="关于预乘透明度（Premultiplied-Alpha）"><a href="#关于预乘透明度（Premultiplied-Alpha）" class="headerlink" title="关于预乘透明度（Premultiplied Alpha）"></a>关于预乘透明度（Premultiplied Alpha）</h3><p>简单地说，比如常规的半透明半纯红色图像RGBA归一化值为(0.5, 0, 0, 0.5)，由预乘透明度图像方式存储则RGBA值为(0.25, 0, 0, 0.5)。由此可知，即每个颜色分量都乘以alpha通道值作为结果值：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">`color.rgb *= color.alpha`</span><br></pre></td></tr></table></figure>
+<p>为什么要引入预乘呢？</p>
+<p>这种做法可以加速图片渲染的速度，如果你的颜色分量是已经经过预乘处理过的，则在渲染时可以直接使用而不需要再进行3次的乘法运算，从而提高渲染效率。此外，实际上它还解决了以下几个问题。</p>
+<ul>
+<li>解决纹理比例缩放映射产生的颜色错误问题</li>
+<li>可以和其他纹理一起正常混合而不打破批次渲染</li>
+</ul>
+<h3 id="关于iOS平台下的渲染"><a href="#关于iOS平台下的渲染" class="headerlink" title="关于iOS平台下的渲染"></a>关于iOS平台下的渲染</h3><p>iOS平台中如果使用<code>CAEAGLLayer</code>对象作为顶部图层并且与它下面的图层进行颜色混合，那么渲染缓存的颜色数据必须用一种<strong>预先乘好的</strong>（<strong>premultiplied</strong>）alpha格式。而读取出来的像素数据没有经过预乘Alpha操作，所以造成了渲染结果丢失了Alpha的现象。</p>
+<p>综上，所在我们读取出来的RGB值分别乘上Alpha的操作就能够正常渲染：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">uint8_t alpha;</span><br><span class="line">     for (int y = 0; y &lt; p-&gt;s-&gt;img_x; y++) &#123;</span><br><span class="line">         for (int x = 0; x &lt; p-&gt;s-&gt;img_y; x++) &#123;</span><br><span class="line">             alpha = *(pixels + 3); // 取出Alpha值</span><br><span class="line">             *pixels = round(*pixels * alpha / 255.f); // R * Alpha</span><br><span class="line">             *(pixels + 1) = round(*(pixels + 1) * alpha / 255.f); // G * Alpha</span><br><span class="line">             *(pixels + 2) = round(*(pixels + 2) * alpha / 255.f); // B * Alpha</span><br><span class="line">             pixels += 4;</span><br><span class="line">         &#125;</span><br><span class="line">     &#125;</span><br></pre></td></tr></table></figure>
+
+          
+        
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
     <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/21/记一次podspec踩坑经历/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -434,7 +581,7 @@
               
                 <a href="/archives/">
               
-                  <span class="site-state-item-count">1</span>
+                  <span class="site-state-item-count">2</span>
                   <span class="site-state-item-name">posts</span>
                 </a>
               </div>
