@@ -86,10 +86,14 @@
 <meta property="og:site_name" content="时雨のCODE_POOL">
 <meta property="og:description" content="最近在工作中遇到一个PNG图片最终渲染出来丢失了Alpha(透明度)的问题，在经过不断地查阅资料和思考后终于解决了这个问题，在这里想和大家分享一下过程中学习到的一些知识点。 问题背景目前所做的项目是一个跨平台渲染引擎，使用的是stb_image库读取图片像素数据（以RGBA排列），之后通过OpenGL的glTexImage2D生成纹理并渲染，iOS平台使用EAGLLayer来显示最后的渲染结果。">
 <meta property="og:locale" content="default">
-<meta property="og:updated_time" content="2019-03-24T09:53:34.761Z">
+<meta property="og:image" content="https://ws2.sinaimg.cn/large/006tKfTcgy1g1esnyp4naj30tm0sotc2.jpg">
+<meta property="og:image" content="https://ws1.sinaimg.cn/large/006tKfTcgy1g1esnz343fj30tk0ss74v.jpg">
+<meta property="og:image" content="https://ws2.sinaimg.cn/large/006tKfTcgy1g1esnyp4naj30tm0sotc2.jpg">
+<meta property="og:updated_time" content="2019-03-25T01:56:04.233Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Xcode的Compress PNG Files作用分析">
 <meta name="twitter:description" content="最近在工作中遇到一个PNG图片最终渲染出来丢失了Alpha(透明度)的问题，在经过不断地查阅资料和思考后终于解决了这个问题，在这里想和大家分享一下过程中学习到的一些知识点。 问题背景目前所做的项目是一个跨平台渲染引擎，使用的是stb_image库读取图片像素数据（以RGBA排列），之后通过OpenGL的glTexImage2D生成纹理并渲染，iOS平台使用EAGLLayer来显示最后的渲染结果。">
+<meta name="twitter:image" content="https://ws2.sinaimg.cn/large/006tKfTcgy1g1esnyp4naj30tm0sotc2.jpg">
 
 
 
@@ -301,7 +305,9 @@
       
         <p>最近在工作中遇到一个PNG图片最终渲染出来丢失了Alpha(透明度)的问题，在经过不断地查阅资料和思考后终于解决了这个问题，在这里想和大家分享一下过程中学习到的一些知识点。</p>
 <h4 id="问题背景"><a href="#问题背景" class="headerlink" title="问题背景"></a>问题背景</h4><p>目前所做的项目是一个跨平台渲染引擎，使用的是stb_image库读取图片像素数据（以RGBA排列），之后通过OpenGL的glTexImage2D生成纹理并渲染，iOS平台使用EAGLLayer来显示最后的渲染结果。</p>
-<p>然而发现了放在Xcode工程下面的PNG图片能够正常的显示，而通过下载的PNG图片却出现了Alpha信息丢失的情况。</p>
+<p>然而发现了放在Xcode工程下面的PNG图片能够正常的显示，而通过下载的PNG图片却出现了Alpha信息丢失的情况,如下所示分别是加载Xcode工程中的PNG图片和加载通过下载的PNG图片。</p>
+<p><img src="https://ws2.sinaimg.cn/large/006tKfTcgy1g1esnyp4naj30tm0sotc2.jpg" alt></p>
+<p><img src="https://ws1.sinaimg.cn/large/006tKfTcgy1g1esnz343fj30tk0ss74v.jpg" alt></p>
 <p>那么为什么会从工程中读取的PNG像素数据能正常显示，而下载的PNG图片却丢失了Alpha信息呢？我们发现在Xcode的Build Settings中有个和PNG相关的选项叫做Compress PNG Files，默认是开启的，我们尝试着关闭这个选项，发现再加载工程的PNG图片也出现了Alpha信息丢失的情况了。那么问题就定位到了这个Compress PNG Files了，到底这个Compress PNG Files到底做了什么事情呢？</p>
 <h3 id="关于PNG"><a href="#关于PNG" class="headerlink" title="关于PNG"></a>关于PNG</h3><p>首先我们来简单看下PNG是啥，维基百科上面的定义是便<strong>携式网络图形</strong>（英语：Portable Network Graphics，缩写：<strong>PNG</strong>）是一种无损压缩的位图图形格式，支持索引、灰度、RGB三种颜色方案以及Alpha通道等特性。</p>
 <p>如果想更具体的了解PNG，可以看一下<a href="https://www.cnblogs.com/lidabo/p/3701197.html" target="_blank" rel="noopener">PNG文件结构</a>。</p>
@@ -325,8 +331,9 @@
 <li>可以和其他纹理一起正常混合而不打破批次渲染</li>
 </ul>
 <h3 id="关于iOS平台下的渲染"><a href="#关于iOS平台下的渲染" class="headerlink" title="关于iOS平台下的渲染"></a>关于iOS平台下的渲染</h3><p>iOS平台中如果使用<code>CAEAGLLayer</code>对象作为顶部图层并且与它下面的图层进行颜色混合，那么渲染缓存的颜色数据必须用一种<strong>预先乘好的</strong>（<strong>premultiplied</strong>）alpha格式。而读取出来的像素数据没有经过预乘Alpha操作，所以造成了渲染结果丢失了Alpha的现象。</p>
-<p>综上，所在我们读取出来的RGB值分别乘上Alpha的操作就能够正常渲染：</p>
+<p>综上，所在我们读取出来的RGB值分别乘上Alpha后就能够正常渲染：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">uint8_t alpha;</span><br><span class="line">     for (int y = 0; y &lt; p-&gt;s-&gt;img_x; y++) &#123;</span><br><span class="line">         for (int x = 0; x &lt; p-&gt;s-&gt;img_y; x++) &#123;</span><br><span class="line">             alpha = *(pixels + 3); // 取出Alpha值</span><br><span class="line">             *pixels = round(*pixels * alpha / 255.f); // R * Alpha</span><br><span class="line">             *(pixels + 1) = round(*(pixels + 1) * alpha / 255.f); // G * Alpha</span><br><span class="line">             *(pixels + 2) = round(*(pixels + 2) * alpha / 255.f); // B * Alpha</span><br><span class="line">             pixels += 4;</span><br><span class="line">         &#125;</span><br><span class="line">     &#125;</span><br></pre></td></tr></table></figure>
+<p><img src="https://ws2.sinaimg.cn/large/006tKfTcgy1g1esnyp4naj30tm0sotc2.jpg" alt></p>
 
       
     </div>
